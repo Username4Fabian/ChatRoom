@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login</title>
+    <link rel="stylesheet" type="text/css" href="static/style_login.css">
+</head>
+<body>
+    <h1>Login</h1>
+    {% for message in get_flashed_messages() %}
+        <p>{{ message }}</p>
+    {% endfor %}
+    <form id="login-form" action="{{ url_for('login') }}" method="POST">
+        <label for="username">Username:</label>
+        <input type="text" name="username" required>
+        <label for="password">Password:</label>
+        <input type="password" name="password" required>
+    </form>
+    <button type="submit" form="login-form">Login</button>
+    <br>
+    <button type="button" onclick="redirectToHome()">Back to Home</button>
+    <script>
+        function redirectToHome() {
+          window.location.href = "{{ url_for('index') }}";
+        }
+      </script>
+
+

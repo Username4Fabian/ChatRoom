@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatroom</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+
+    <link rel="stylesheet" type="text/css" href="static/style.css">
+
+</head>
+
+<body>
+    <div class="header">
+        <h1>Welcome, {{ username }}</h1>
+        <button class="logout-btn" onclick="location.href='/logout'">Logout</button>
+    </div>
+
+    <div class="chat-container">
+        <div id="messages" class="chat-messages">
+            {% for message in messages %}
+            <div class="message-wrapper">
+                <span class="username">{{ message[0] }}</span>
+                <div class="message-content">
+                    <p>{{ message[1] }}</p>
+                    {% if message[2] %}
+                    {% set file_extension = message[2].split('.')[-1].lower() %}
+                    {% if file_extension in ['png', 'jpg', 'jpeg', 'gif'] %}
+                        <img src="{{ url_for('uploaded_file', filename=message[2].split('/')[-1]) }}" alt="Image" class="message-image">
+                    {% else %}
+                        <a href="{{ url_for('uploaded_file', filename=message[2].split('/')[-1]) }}" download>{{ message[3] }}</a>
+                    {% endif %}
+                {% endif %}            
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    
+<!-- Wrap the input form in a new div with class "input-bar-container" -->
+<div class="input-bar-container">
+    <form id="message-form">
+        <input type="text" id="message" autocomplete="off">
+        <input type="file" id="file">
+        <button type="submit" class="send-icon">
+    <i class="fas fa-paper-plane"></i>
+</button>
+    </form>
+</div>
+
+    </div>
+
+    <div id="dropzone" class="hidden"></div>
+    <div id="file-previews"></div>
+    
+<!--JavaScript-->
+    <script>
+        // Initialize socket.io
+        const socket = io();
+
+        // Function to scroll to the bottom of the chat
+        function scrollToBottom() {
+            const messagesDiv = document.getElementById('messages');
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        // Connect to the socket.io server
+        socket.on('connect', () => {
+            socket.on('message', data => {
+                let messageHTML = `
+                <div class="message-wrapper">
+                    <span class="username">${data.username}</span>
+                    <div class="message-content">
+                        <p>${data.content}</p>`;
+
+                if (data.file_urls) {
+                    const fileExtension = data.file_urls[0].split('.').pop().toLowerCase();
+                    if (['png', 'jpg', 'jpeg', 'gif'].includes(fileExtension)) {
+                        messageHTML += `<img src="${data.file_urls[0]}" alt="Image" class="message-image">`;
+                    } else {
+                        messageHTML += `<a href="${data.file_urls[0]}" download>${data.original_filenames[0]}</a>`;
+                    }
+                }
+                messageHTML += `</div></div>`;
+
+                // Append the message to the chat and scroll to the bottom
+                $('#messages').append(messageHTML);
+                scrollToBottom();
+            });
+        });
+
+        // Function to upload a file to the server
+        async function uploadFile(file) {
+            const formData = new FormData();
+            formData.append('file', file);
+            const response = await fetch('/upload_file', {
+                method: 'POST',
+                body: formData
+            });
+            return await response.text();
+        }
+
+        $('#message-form').submit(async e => {
+            e.preventDefault();
+
+            // Get the text message and file input
+            const messageContent = $('#message').val();
+            const files = $('#file')[0].files;
+
+            if (files.length > 0 || messageContent) {
+                const messageData = {
+                    username: '{{ username }}',
+                    content: messageContent
+                };
+
+                // Upload the file and add the file data to the message
+                if (files.length > 0) {
+                    const uploadedFileUrls = await Promise.all(Array.from(files).map(file => uploadFile(file)));
+                    messageData.file_urls = uploadedFileUrls;
+                    messageData.original_filenames = Array.from(files).map(file => file.name);
+                }
+                socket.send(messageData);
+
+                // Clear the message and file input
+                $('#message').val('');
+                $('#file-previews').empty();
+                $('#file').val('');
+            }
+        });
+        scrollToBottom();
+
+// File dropzone functionality
+const dropzone = document.getElementById('dropzone');
+const fileInput = document.getElementById('file');
+const filePreviews = document.getElementById('file-previews');
+
+function showDropzone() {
+    dropzone.classList.remove('hidden');
+}
+
+function hideDropzone() {
+    dropzone.classList.add('hidden');
+}
+
+function addFilePreview(file) {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onloadend = function () {
+        const previewWrapper = document.createElement('div');
+        previewWrapper.classList.add('preview-wrapper');
+        
+        const previewImg = document.createElement('img');
+        previewImg.src = reader.result;
+        previewImg.classList.add('file-preview');
+        
+        const removeButton = document.createElement('button');
+        removeButton.textContent = 'Remove';
+        removeButton.classList.add('remove-btn');
+        removeButton.onclick = function () {
+            fileInput.files = removeFileFromList(fileInput.files, file);
+            previewWrapper.remove();
+        };
+        
+        previewWrapper.appendChild(previewImg);
+        previewWrapper.appendChild(removeButton);
+        filePreviews.appendChild(previewWrapper);
+    };
+}
+
+function removeFileFromList(fileList, fileToRemove) {
+    const newFileList = new DataTransfer();
+    Array.from(fileList).forEach(file => {
+        if (file !== fileToRemove) {
+            newFileList.items.add(file);
+        }
+    });
+    return newFileList.files;
+}
+
+document.addEventListener('dragover', e => {
+    e.preventDefault();
+    showDropzone();
+});
+
+document.addEventListener('drop', e => {
+    e.preventDefault();
+    const files = e.dataTransfer.files;
+    Array.from(files).forEach(file => addFilePreview(file));
+    fileInput.files = files;
+    hideDropzone();
+});
+
+dropzone.addEventListener('dragleave', hideDropzone);
+    </script>
+</body>
+</html>

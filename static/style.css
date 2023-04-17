@@ -1,0 +1,271 @@
+/* Reset styles */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* Main styles */
+body {
+  background-color: #36393F;
+  color: #DCDDDE;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 16px;
+}
+
+h1 {
+  color: #fff;
+  font-size: 40px;
+  text-align: center;
+  padding: 20px;
+  margin-bottom: 0;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.logout-btn {
+  background-color: #7289DA;
+  border: none;
+  border-radius: 3px;
+  color: #fff;
+  cursor: pointer;
+  font-size: 12px;
+  margin-bottom: 20px;
+  padding: 5px 10px;
+}
+
+.logout-btn:hover {
+  background-color: #677bc4;
+}
+
+button {
+  background-color: #7289DA;
+  border: none;
+  border-radius: 3px;
+  color: #fff;
+  cursor: pointer;
+  font-size: 16px;
+  margin-bottom: 20px;
+  padding: 10px 20px;
+}
+
+
+#messages {
+  background-color: #2F3136;
+  border-radius: 5px;
+  margin-bottom: 20px;
+  padding: 20px;
+}
+
+.message-wrapper {
+  position: relative;
+  margin-bottom: 20px;
+}
+
+.username {
+  background-color: #7289da;
+  border-radius: 3px;
+  color: #fff;
+  font-size: 14px;
+  padding: 2px 6px;
+  position: absolute;
+  top: -20px;
+}
+
+.message-content {
+  background-color: #2f3136;
+  border-radius: 5px;
+  padding: 20px;
+}
+
+.message-content p {
+  margin-bottom: 10px;
+}
+
+.message-content a {
+  color: #7289da;
+  text-decoration: none;
+}
+
+.message-content a:hover {
+  text-decoration: underline;
+}
+
+.message-image {
+  max-width: 300px;
+  margin-top: 10px;
+}
+
+#message-form {
+  display: flex;
+  margin-bottom: 0px;
+}
+
+#message {
+  background-color: #40444B;
+  border: none;
+  border-radius: 3px;
+  color: #DCDDDE;
+  font-size: 16px;
+  padding: 10px;
+  width: 100%;
+}
+
+#file {
+  display: none;
+}
+
+#file-label {
+  background-color: #7289DA;
+  border: none;
+  border-radius: 3px;
+  color: #fff;
+  cursor: pointer;
+  font-size: 16px;
+  margin-right: 10px;
+  padding: 10px 20px;
+}
+
+#file-label:hover {
+  background-color: #677bc4;
+}
+
+#send-button {
+  background-color: #7289DA;
+  border: none;
+  border-radius: 3px;
+  color: #fff;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 10px 20px;
+  margin: 30px;
+}
+
+#send-button:hover {
+  background-color: #677bc4;
+}
+
+/* Drag-and-drop dropzone */
+#dropzone {
+  background-color: rgba(0, 0, 0, 0.5);
+  border: 2px dashed #7289da;
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: fixed;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1000;
+}
+
+#dropzone.hidden {
+  display: none;
+}
+
+#dropzone p {
+  font-size: 24px;
+  text-align: center;
+}
+
+/* File previews */
+#file-previews {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.preview-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 100px;
+}
+
+.file-preview {
+  max-width: 100%;
+  max-height: 100px;
+  border-radius: 3px;
+}
+
+.remove-btn {
+  background-color: #7289DA;
+  border:0
+}
+
+.chat-container {
+  display: flex;
+  flex-direction: column;
+}
+
+.message-container {
+  flex-grow: 1;
+  overflow-y: scroll;
+  margin-bottom: 10px;
+}
+
+#message-form {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background-color: #36393F;
+  padding: 10px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  box-shadow: 0 -1px 4px rgba(0, 0, 0, 0.1);
+}
+/* Add this new class for the input bar container */
+.input-bar-container {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 10px;
+  background-color: #36393F;
+  box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.1);
+}
+
+/* Update the .message-container class */
+.message-container {
+  flex-grow: 1;
+  overflow-y: scroll;
+  margin-bottom: 60px; 
+  max-height: calc(100vh - 100px);
+}
+
+.send-icon {
+  background-color: transparent;
+  border: none;
+  cursor: pointer;
+  color: #ffffff;
+  font-size: 20px;
+  padding: 0;
+  margin-left: 10px;
+  margin-top: 19px;
+  vertical-align: middle;
+}
+
+
+
+
+/* Responsive styles */
+@media screen and (max-width: 768px) {
+  #message-form {
+      flex-direction: column;
+  }
+
+  #file-label {
+      margin-bottom: 10px;
+      margin-right: 0;
+  }
+}
+

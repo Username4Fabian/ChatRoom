@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chatroom</title>
+  <link rel="stylesheet" type="text/css" href="static/style_login.css">
+</head>
+<body>
+  <h1>Welcome to the Chatroom</h1>
+  <form action="{{ url_for('login') }}">
+    <button type="submit">Login</button>
+  </form>
+  <form action="{{ url_for('register') }}">
+    <button type="submit">Register</button>
+  </form>
+</body>
+</html>
