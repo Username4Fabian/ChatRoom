@@ -70,13 +70,16 @@
   }
 }
 
-
 $(document).ready(() => {
     if(performance.navigation.type === 1){
         window.scrollTo(0, document.body.scrollHeight);
     }
+    window.onload = function() {
+        window.scrollTo(0, document.body.scrollHeight);
+    }
     scrollToBottom();
 });
+
 socket.on('connect', () => {
     socket.on('message', data => {
         let messageHTML = `
