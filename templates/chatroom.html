@@ -7,14 +7,14 @@
     <title>Chatroom</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"> 
 
-
-    <link rel="stylesheet" type="text/css" href="static/style.css">
+    <link rel="stylesheet" href="/static/style.css">
 
 </head>
 
 <body>
+
     <div class="header">
         <h1>Welcome, {{ username }}</h1>
         <button class="logout-btn" onclick="location.href='/logout'">Logout</button>
@@ -39,7 +39,8 @@
             </div>
             {% endfor %}
         </div>
-    
+    </div>
+
 <!-- Wrap the input form in a new div with class "input-bar-container" -->
 <div class="input-bar-container">
     <form id="message-form">
@@ -51,7 +52,6 @@
     </form>
 </div>
 
-    </div>
 
     <div id="dropzone" class="hidden"></div>
     <div id="file-previews"></div>
@@ -61,36 +61,46 @@
         // Initialize socket.io
         const socket = io();
 
-        // Function to scroll to the bottom of the chat
         function scrollToBottom() {
-            const messagesDiv = document.getElementById('messages');
-            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+  const messages = $('#messages .message-wrapper');
+  if (messages.length) {
+    const lastMessage = messages.last()[0];
+    lastMessage.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    window.scrollBy(0, 70); 
+  }
+}
+
+
+$(document).ready(() => {
+    if(performance.navigation.type === 1){
+        window.scrollTo(0, document.body.scrollHeight);
+    }
+    scrollToBottom();
+});
+socket.on('connect', () => {
+    socket.on('message', data => {
+        let messageHTML = `
+        <div class="message-wrapper">
+            <span class="username">${data.username}</span>
+            <div class="message-content">
+                <p>${data.content}</p>`;
+
+        if (data.file_urls) {
+            const fileExtension = data.file_urls[0].split('.').pop().toLowerCase();
+            if (['png', 'jpg', 'jpeg', 'gif'].includes(fileExtension)) {
+                messageHTML += `<img src="${data.file_urls[0]}" alt="Image" class="message-image">`;
+                isImage = true; 
+            } else {
+                messageHTML += `<a href="${data.file_urls[0]}" download>${data.original_filenames[0]}</a>`;
+            }
         }
 
-        // Connect to the socket.io server
-        socket.on('connect', () => {
-            socket.on('message', data => {
-                let messageHTML = `
-                <div class="message-wrapper">
-                    <span class="username">${data.username}</span>
-                    <div class="message-content">
-                        <p>${data.content}</p>`;
-
-                if (data.file_urls) {
-                    const fileExtension = data.file_urls[0].split('.').pop().toLowerCase();
-                    if (['png', 'jpg', 'jpeg', 'gif'].includes(fileExtension)) {
-                        messageHTML += `<img src="${data.file_urls[0]}" alt="Image" class="message-image">`;
-                    } else {
-                        messageHTML += `<a href="${data.file_urls[0]}" download>${data.original_filenames[0]}</a>`;
-                    }
-                }
-                messageHTML += `</div></div>`;
-
-                // Append the message to the chat and scroll to the bottom
-                $('#messages').append(messageHTML);
-                scrollToBottom();
-            });
-        });
+        messageHTML += `</div></div>`;
+        $('#messages').append(messageHTML);
+            scrollToBottom();
+        
+    });
+});
 
         // Function to upload a file to the server
         async function uploadFile(file) {
@@ -128,9 +138,9 @@
                 $('#message').val('');
                 $('#file-previews').empty();
                 $('#file').val('');
+                scrollToBottom();
             }
         });
-        scrollToBottom();
 
 // File dropzone functionality
 const dropzone = document.getElementById('dropzone');

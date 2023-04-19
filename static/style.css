@@ -257,9 +257,11 @@ button {
 
 
 
+
 /* Responsive styles */
 @media screen and (max-width: 768px) {
   #message-form {
+      padding-bottom: 30px;
       flex-direction: column;
   }
 
