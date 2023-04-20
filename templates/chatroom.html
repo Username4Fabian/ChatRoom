@@ -58,26 +58,42 @@
     
 <!--JavaScript-->
     <script>
-        // Initialize socket.io
-        const socket = io();
 
-        function scrollToBottom() {
+$(document).ready(function () {
+    const messageInput = $('#message');
+
+    // Focus the cursor on the input bar when the page is loaded
+    messageInput.focus();
+
+    // Focus the cursor back to the input bar when clicking anywhere on the page
+    $(document).on('click', function (e) {
+        if (e.target.id !== 'message') {
+            messageInput.focus();
+        }
+    });
+});
+
+//Scroll to bottom of page        
+        // Initialize socket.io
+        const socket = io();       
+function scrollToBottom() {
   const messages = $('#messages .message-wrapper');
   if (messages.length) {
+
     const lastMessage = messages.last()[0];
-    lastMessage.scrollIntoView({ behavior: 'smooth', block: 'end' });
-    window.scrollBy(0, 70); 
+        const threshold = 900; // The distance from the bottom in pixels to trigger auto-scroll
+        const distanceFromBottom = document.documentElement.scrollHeight - (window.scrollY + window.innerHeight);
+    
+        if (distanceFromBottom <= threshold) {
+            lastMessage.scrollIntoView({ behavior: 'smooth', block: 'end' });
+            window.scrollBy(0, 50000); 
+        }
+
   }
 }
 
-$(document).ready(() => {
-    if(performance.navigation.type === 1){
-        window.scrollTo(0, document.body.scrollHeight);
-    }
-/*    window.onload = function() {
-        window.scrollTo(0, document.body.scrollHeight);
-    } */
-    scrollToBottom();
+$(window).on('load', function () {
+    window.scrollTo(0, document.body.scrollHeight);
 });
 
 socket.on('connect', () => {
@@ -87,12 +103,13 @@ socket.on('connect', () => {
             <span class="username">${data.username}</span>
             <div class="message-content">
                 <p>${data.content}</p>`;
-
+        
+        let image = false;
         if (data.file_urls) {
             const fileExtension = data.file_urls[0].split('.').pop().toLowerCase();
             if (['png', 'jpg', 'jpeg', 'gif'].includes(fileExtension)) {
+                image = true;
                 messageHTML += `<img src="${data.file_urls[0]}" alt="Image" class="message-image">`;
-                isImage = true; 
             } else {
                 messageHTML += `<a href="${data.file_urls[0]}" download>${data.original_filenames[0]}</a>`;
             }
@@ -100,8 +117,11 @@ socket.on('connect', () => {
 
         messageHTML += `</div></div>`;
         $('#messages').append(messageHTML);
-            scrollToBottom();
+        setTimeout(scrollToBottom, 100);
+            //scrollToBottom();
         
+
+
     });
 });
 
