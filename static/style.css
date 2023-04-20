@@ -254,6 +254,12 @@ button {
   vertical-align: middle;
 }
 
+.message-video {
+  height: auto;
+  max-width: 300px;
+  margin-top: 10px;
+}
+
 
 
 
