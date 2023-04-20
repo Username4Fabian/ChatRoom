@@ -98,6 +98,8 @@ button {
 .message-image {
   max-width: 300px;
   margin-top: 10px;
+  margin-left: 10px;
+  margin-right: 10px;
 }
 
 #message-form {
@@ -185,8 +187,11 @@ button {
 .preview-wrapper {
   display: flex;
   flex-direction: column;
+  margin-bottom: 55px;
   align-items: center;
   max-width: 100px;
+    margin-left: 5px;
+  margin-right: 5px;
 }
 
 .file-preview {
@@ -260,7 +265,15 @@ button {
   margin-top: 10px;
 }
 
+.file-preview-container{
+  display: flex;
+  flex-direction: row;
+}
+.timestamp {
+  font-size: 11px;
+  color: #999;
 
+}
 
 
 

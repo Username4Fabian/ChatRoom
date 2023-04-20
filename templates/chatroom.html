@@ -14,38 +14,41 @@
 </head>
 
 <body>
-
     <div class="header">
         <h1>Welcome, {{ username }}</h1>
         <button class="logout-btn" onclick="location.href='/logout'">Logout</button>
     </div>
-
+    
     <div class="chat-container">
         <div id="messages" class="chat-messages">
-            {% for message in messages %}
+            {% for username, content, file_urls, original_filenames, timestamp in messages %}
             <div class="message-wrapper">
-                <span class="username">{{ message[0] }}</span>
+                <span class="username">{{ username }}</span>
+                <span class="timestamp" data-utc-timestamp="{{ timestamp.isoformat() }}"></span></span>
+
+
                 <div class="message-content">
-                    <p>{{ message[1] }}</p>
-                    {% if message[2] %}
-                    {% set file_extension = message[2].split('.')[-1].lower() %}
-                    {% if file_extension in ['png', 'jpg', 'jpeg', 'gif'] %}
-                    <img src="{{ url_for('uploaded_file', filename=message[2].split('/')[-1]) }}" alt="Image" class="message-image">
-                {% elif file_extension in ['mp4', 'webm', 'ogg'] %}
-                    <video controls src="{{ url_for('uploaded_file', filename=message[2].split('/')[-1]) }}" class="message-video"></video>
-                {% else %}
-                    <a href="{{ url_for('uploaded_file', filename=message[2].split('/')[-1]) }}" download>{{ message[3] }}</a>
-                {% endif %}
-                
-                {% endif %}            
+                    <p>{{ content }}</p>
+                    {% for file_url, original_filename in zip(file_urls, original_filenames) %}
+                        {% set file_extension = file_url.split('.')[-1].lower() %}
+                        {% if file_extension in ['png', 'jpg', 'jpeg', 'gif'] %}
+                            <img src="{{ url_for('uploaded_file', filename=file_url.split('/')[-1]) }}" alt="Image" class="message-image">
+                        {% elif file_extension in ['mp4', 'webm', 'ogg'] %}
+                            <video controls src="{{ url_for('uploaded_file', filename=file_url.split('/')[-1]) }}" class="message-video"></video>
+                        {% else %}
+                            <a href="{{ url_for('uploaded_file', filename=file_url.split('/')[-1]) }}" download>{{ original_filename }}</a>
+                        {% endif %}
+                    {% endfor %}
                 </div>
             </div>
             {% endfor %}
         </div>
     </div>
-
+    
 <!-- Wrap the input form in a new div with class "input-bar-container" -->
+
 <div class="input-bar-container">
+    <div class="file-preview-container" id="file-preview-container"></div>
     <form id="message-form">
         <input type="text" id="message" autocomplete="off">
         <input type="file" id="file">
@@ -76,6 +79,18 @@ $(document).ready(function () {
     });
 });
 
+function updateLocalTimestamps() {
+  const timestampElements = document.querySelectorAll('[data-utc-timestamp]');
+  timestampElements.forEach(element => {
+    const utcTimestamp = element.getAttribute('data-utc-timestamp');
+    const localTimestamp = new Date(utcTimestamp).toLocaleString();
+    element.textContent = localTimestamp;
+  });
+}
+
+updateLocalTimestamps();
+
+
 //Scroll to bottom of page        
         // Initialize socket.io
         const socket = io();       
@@ -89,7 +104,7 @@ function scrollToBottom() {
     
         if (distanceFromBottom <= threshold) {
             lastMessage.scrollIntoView({ behavior: 'smooth', block: 'end' });
-            window.scrollBy(0, 50000); 
+            window.scrollBy(0, 900); 
         }
 
   }
@@ -99,35 +114,46 @@ $(window).on('load', function () {
     window.scrollTo(0, document.body.scrollHeight);
 });
 
-socket.on('connect', () => {
-    socket.on('message', data => {
-        let messageHTML = `
-        <div class="message-wrapper">
-            <span class="username">${data.username}</span>
-            <div class="message-content">
-                <p>${data.content}</p>`;
-        
-        if (data.file_urls) {
-            const fileExtension = data.file_urls[0].split('.').pop().toLowerCase();
+function formatTimestamp(timestamp) {
+        const date = new Date(timestamp);
+        const hours = date.getHours().toString().padStart(2, '0');
+        const minutes = date.getMinutes().toString().padStart(2, '0');
+        return `${hours}:${minutes}`;
+    }
+
+
+function appendFilesToList(existingFiles, newFiles) {
+    const updatedFileList = new DataTransfer();
+    Array.from(existingFiles).forEach(file => updatedFileList.items.add(file));
+    Array.from(newFiles).forEach(file => updatedFileList.items.add(file));
+    return updatedFileList.files;
+}
+
+socket.on('message', data => {
+  const localTimestamp = new Date(data.timestamp).toLocaleString();
+  let messageHTML = `
+  <div class="message-wrapper">
+      <span class="username">${data.username}</span>
+      <span class="timestamp" data-utc-timestamp="${data.timestamp}">${localTimestamp}</span>
+      <div class="message-content">
+          <p>${data.content}</p>`;
+    
+    if (data.file_urls) {
+        data.file_urls.forEach((url, index) => {
+            const fileExtension = url.split('.').pop().toLowerCase();
             if (['png', 'jpg', 'jpeg', 'gif'].includes(fileExtension)) {
-                messageHTML += `<img src="${data.file_urls[0]}" alt="Image" class="message-image">`;
-            } 
-            else if (['mp4', 'webm', 'ogg'].includes(fileExtension)) {
-            messageHTML += `<video controls src="${data.file_urls[0]}" class="message-video"></video>`;
+                messageHTML += `<img src="${url}" alt="Image" class="message-image">`;
+            } else if (['mp4', 'webm', 'ogg'].includes(fileExtension)) {
+                messageHTML += `<video controls src="${url}" class="message-video"></video>`;
+            } else {
+                messageHTML += `<a href="${url}" download>${data.original_filenames[index]}</a>`;
             }
-            else {
-                messageHTML += `<a href="${data.file_urls[0]}" download>${data.original_filenames[0]}</a>`;
-            }
-        }
+        });
+    }
 
-        messageHTML += `</div></div>`;
-        $('#messages').append(messageHTML);
-        setTimeout(scrollToBottom, 100);
-            //scrollToBottom();
-        
-
-
-    });
+    messageHTML += `</div></div>`;
+    $('#messages').append(messageHTML);
+    setTimeout(scrollToBottom, 100);
 });
 
         // Function to upload a file to the server
@@ -142,35 +168,42 @@ socket.on('connect', () => {
         }
 
         $('#message-form').submit(async e => {
-            e.preventDefault();
+    e.preventDefault();
 
-            // Get the text message and file input
-            const messageContent = $('#message').val();
-            const files = $('#file')[0].files;
+    // Get the text message and file input
+    const messageContent = $('#message').val();
+    const files = $('#file')[0].files;
 
-            if (files.length > 0 || messageContent) {
-                const messageData = {
-                    username: '{{ username }}',
-                    content: messageContent
-                };
+    if (files.length > 0 || messageContent) {
+        const messageData = {
+            username: '{{ username }}',
+            content: messageContent
+        };
 
-                // Upload the file and add the file data to the message
-                if (files.length > 0) {
-                    const uploadedFileUrls = await Promise.all(Array.from(files).map(file => uploadFile(file)));
-                    messageData.file_urls = uploadedFileUrls;
-                    messageData.original_filenames = Array.from(files).map(file => file.name);
-                }
-                socket.send(messageData);
+        // Upload the files and add the file data to the message
+        if (files.length > 0) {
+            const uploadedFileUrls = await Promise.all(Array.from(files).map(file => uploadFile(file)));
+            messageData.file_urls = uploadedFileUrls;
+            messageData.original_filenames = Array.from(files).map(file => file.name);
+        }
 
-                // Clear the message and file input
-                $('#message').val('');
-                $('#file-previews').empty();
-                $('#file').val('');
-                scrollToBottom();
-            }
-        });
+        // Send the message with all the images
+        socket.send(messageData);
+
+        // Clear the message and file input
+        $('#message').val('');
+
+        // Clear the file previews and file input
+        document.getElementById('file-preview-container').innerHTML = '';
+        $('#file').val('');
+
+        scrollToBottom();
+    }
+});
+
 
 // File dropzone functionality
+
 const dropzone = document.getElementById('dropzone');
 const fileInput = document.getElementById('file');
 const filePreviews = document.getElementById('file-previews');
@@ -182,31 +215,36 @@ function showDropzone() {
 function hideDropzone() {
     dropzone.classList.add('hidden');
 }
+function addFilePreviews(files) {
+    Array.from(files).forEach(file => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onloadend = function () {
+            const previewWrapper = document.createElement('div');
+            previewWrapper.classList.add('preview-wrapper');
+            
+            const previewImg = document.createElement('img');
+            previewImg.src = reader.result;
+            previewImg.classList.add('file-preview');
+            
+            const removeButton = document.createElement('button');
+            removeButton.textContent = 'Remove';
+            removeButton.classList.add('remove-btn');
+            removeButton.onclick = function () {
+                fileInput.files = removeFileFromList(fileInput.files, file);
+                previewWrapper.remove();
+            };
+            
+            previewWrapper.appendChild(previewImg);
+            previewWrapper.appendChild(removeButton);
 
-function addFilePreview(file) {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onloadend = function () {
-        const previewWrapper = document.createElement('div');
-        previewWrapper.classList.add('preview-wrapper');
-        
-        const previewImg = document.createElement('img');
-        previewImg.src = reader.result;
-        previewImg.classList.add('file-preview');
-        
-        const removeButton = document.createElement('button');
-        removeButton.textContent = 'Remove';
-        removeButton.classList.add('remove-btn');
-        removeButton.onclick = function () {
-            fileInput.files = removeFileFromList(fileInput.files, file);
-            previewWrapper.remove();
+            // Append the previewWrapper to the file-preview-container
+            document.getElementById('file-preview-container').appendChild(previewWrapper);
         };
-        
-        previewWrapper.appendChild(previewImg);
-        previewWrapper.appendChild(removeButton);
-        filePreviews.appendChild(previewWrapper);
-    };
+    });
 }
+
+
 
 function removeFileFromList(fileList, fileToRemove) {
     const newFileList = new DataTransfer();
@@ -225,11 +263,12 @@ document.addEventListener('dragover', e => {
 
 document.addEventListener('drop', e => {
     e.preventDefault();
-    const files = e.dataTransfer.files;
-    Array.from(files).forEach(file => addFilePreview(file));
-    fileInput.files = files;
+    const newFiles = e.dataTransfer.files;
+    addFilePreviews(newFiles);
+    fileInput.files = appendFilesToList(fileInput.files, newFiles);
     hideDropzone();
 });
+
 
 dropzone.addEventListener('dragleave', hideDropzone);
     </script>

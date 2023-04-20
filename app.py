@@ -2,6 +2,10 @@ from flask import Flask, render_template, request, redirect, send_from_directory
 from flask_socketio import SocketIO, send, emit
 from werkzeug.utils import secure_filename
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
+from datetime import datetime
+from datetime import timezone
+
+
 import base64
 import uuid
 import sqlite3
@@ -11,6 +15,7 @@ import os
 # Set up application configuration
 UPLOAD_FOLDER = 'static/uploads'
 app = Flask(__name__)
+app.jinja_env.globals.update(zip=zip)  # Add this line to add the zip function to Jinja2 globals
 app.config['SECRET_KEY'] = 'mysecretkey'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 socketio = SocketIO(app)
@@ -40,7 +45,7 @@ def init_db():
     conn = sqlite3.connect('chat.db')
     c = conn.cursor()
     c.execute('''CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, username TEXT UNIQUE, password TEXT)''')
-    c.execute('''CREATE TABLE IF NOT EXISTS messages (id INTEGER PRIMARY KEY, username TEXT, content TEXT, original_filename TEXT, timestamp DATETIME DEFAULT CURRENT_TIMESTAMP, file_url TEXT)''')
+    c.execute('''CREATE TABLE IF NOT EXISTS messages (id INTEGER PRIMARY KEY, username TEXT, content TEXT, original_filenames TEXT, timestamp DATETIME DEFAULT CURRENT_TIMESTAMP, file_urls TEXT)''')
     conn.commit()
     conn.close()
 init_db()
@@ -97,14 +102,20 @@ def login():
 def chatroom():
     conn = sqlite3.connect('chat.db')
     c = conn.cursor()
-    c.execute('SELECT username, content, file_url, original_filename, timestamp FROM messages ORDER BY timestamp')
+    c.execute('SELECT username, content, file_urls, original_filenames, timestamp FROM messages ORDER BY timestamp')
     messages = c.fetchall()
     conn.close()
 
-    print(f"Fetched messages: {messages}")  # Add this line to print the fetched messages
+    # Convert timestamp string to datetime object and split file_urls and original_filenames into lists
+    processed_messages = []
+    for message in messages:
+        username, content, file_urls, original_filenames, timestamp = message
+        timestamp = datetime.strptime(timestamp, '%Y-%m-%d %H:%M:%S')  # Add this line to convert the timestamp string to a datetime object
+        file_urls_list = file_urls.split(',') if file_urls else []
+        original_filenames_list = original_filenames.split(',') if original_filenames else []
+        processed_messages.append((username, content, file_urls_list, original_filenames_list, timestamp))
 
-    return render_template('chatroom.html', username=current_user.username, messages=messages)
-
+    return render_template('chatroom.html', username=current_user.username, messages=processed_messages)
 
 # Define route for user logout
 @app.route('/logout')
@@ -122,13 +133,23 @@ def handle_message(data):
     conn = sqlite3.connect('chat.db')
     c = conn.cursor()
 
-    # Store the file_url and original_filename in the messages table
-    c.execute('INSERT INTO messages (username, content, file_url, original_filename) VALUES (?, ?, ?, ?)',
-              (data['username'], data['content'], data['file_urls'][0] if 'file_urls' in data else None, data['original_filenames'][0] if 'original_filenames' in data else None))
-
+    # Store the file_urls and original_filenames as comma-separated strings in the messages table
+    c.execute('INSERT INTO messages (username, content, file_urls, original_filenames) VALUES (?, ?, ?, ?)',
+              (data['username'], data['content'], ','.join(data['file_urls']) if 'file_urls' in data else None, ','.join(data['original_filenames']) if 'original_filenames' in data else None))
+                
     conn.commit()
+    # Get the inserted message's timestamp
+    message_id = c.lastrowid
+    c.execute('SELECT timestamp FROM messages WHERE id=?', (message_id,))
+    message_timestamp = c.fetchone()[0]
     conn.close()
 
+    # Convert the timestamp to a timezone-aware datetime object
+    naive_timestamp = datetime.strptime(message_timestamp, '%Y-%m-%d %H:%M:%S')
+    aware_timestamp = naive_timestamp.replace(tzinfo=timezone.utc)
+
+    # Add the timestamp to the data sent to the client
+    data['timestamp'] = aware_timestamp.isoformat()
     emit('message', data, broadcast=True)
 
 
@@ -149,7 +170,6 @@ def upload_file():
 @app.route('/uploads/<filename>')
 def uploaded_file(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
-
 
 # Run the application with socket.io support
 if __name__ == '__main__':
