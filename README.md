@@ -18,7 +18,7 @@ This is the main file of the application, which contains the necessary imports, 
 * Running the application with Socket.IO support.
   templates
 
-### HTML templates:
+### HTML:
 
 * index.html: The homepage with links to register and log in.
 * register.html: The user registration page.
